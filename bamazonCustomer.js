@@ -15,10 +15,10 @@ connection.connect(function (err) {
     if (err) throw err;
     console.log("Welcome to bAmazon! You are now connected to the bAmazon Store as id " + connection.threadId);
     console.log('------------------------------------------------------------------------')
-    inventory();
+
 });
 
-function inventory() {
+var inventory = function () {
     console.log("ID |  Product Name |  Department Name |  Price  | Stock Quantity")
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
@@ -27,8 +27,8 @@ function inventory() {
 
         }
         // console.log(res)
+        purchase();
     });
-    purchase();
     // connection.end();
 };
 
@@ -48,16 +48,22 @@ function purchase() {
         var item = answer.item_id;
         var quantityNeeded = answer.quantity;
 
-        connection.query("SELECT * FROM products WHERE item_id " + item, function (err, res) {
+        connection.query("SELECT * FROM products WHERE ?", [answer.item_id], function (err, res) {
             if (err) throw err;
             if (res[0].stock_quantity - quantityNeeded >= 0) {
                 var totalCost = res[0].price * quantityNeeded;
                 console.log("Great news! We got it!")
                 console.log(quantityNeeded + " " + res[0].product_name + " will cost " + totalCost);
-                connection.query("UPDATE products SET stock_quantity = " + (res[0].stock_quantity - quantityNeeded) + "WHERE item_id =" + item);
+                var newQuantity = res[0].stock_quantity - quantityNeeded
+                connection.query("UPDATE products SET stock_quantity WHERE ?", [{
+                    stock_quantity: newQuantity
+                }]);
             } else {
                 console.log("Insufficient quantity")
             };
+            inventory();
         });
     });
 };
+
+inventory();
